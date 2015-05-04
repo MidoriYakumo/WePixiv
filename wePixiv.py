@@ -9,11 +9,12 @@ Version	:0.0.1
 """
 
 import os, sys, time
+import shutil
 # pickle
 
 # WeCase API
 API_KEY = "1011524190"
-API_SECRET = "1898b3f668368b9f4a6f7ac8ed4a918f"
+API_SECRET = "83822a8addf08cbcdaca75c76bec558a"
 REDIRECT_URI = 'https://api.weibo.com/oauth2/default.html'
 TOKEN_FILE = os.getenv('HOME')+'/.weibo_token'
 IMG_TMPFILE = '/tmp/weiboImage_%s'
@@ -32,21 +33,35 @@ def initClient(forceRefreshToken = False):
 	except BaseException:
 		c = Client(API_KEY, API_SECRET, REDIRECT_URI)
 		#print(c.authorize_url)
-		#c.set_code(input('Input code:'))
-		c.set_code(os.popen("kdialog --inputbox 'Open the URL and paste back the code' '"+ c.authorize_url +"'").read().rstrip())
-		f = open(TOKEN_FILE, 'w')
-		f.write(repr(c.token))
-		f.close()
+		#code = input('Input code:')
+		code = os.popen("kdialog --inputbox 'Open the URL and paste back the code' '"+ c.authorize_url +"'").read().rstrip()
+		print(code)
+		try:
+			c.set_code(code)
+		except BaseException as e:
+			print('Error:', e)
+			os.popen('notify-send -i facebook "微博发图:init" "Error:%s"' % (e))
+#			c = initClient(True)
+			c = None
+		else:
+			f = open(TOKEN_FILE, 'w')
+			f.write(repr(c.token))
+			f.close()
 	return c
 
 #朝ノよー - 音ノ木坂学院2月14日。 (48784184@630924)[バレンタイン ラブライブ! 西木野真姫 2月14日 ゔぇえ 下駄箱 ツンデレ ]{Photoshop SAI}(_)
-def uploadPixivImage(c, fn):
+def uploadPixivImage(c, ffn):
 
 	try:
 		tn = IMG_TMPFILE %  time.time()
-		cp_exit = os.popen( ("cp '%s' '%s'") % (fn,tn)).read()
-		if cp_exit.split(): print(cp_exit)
-		fn = os.path.basename(os.path.splitext(fn)[0])
+
+		shutil.copy2(ffn, tn)
+		print((ffn, tn))
+
+#		cp_exit = os.popen( ("zsh -c \"cp '%s' '%s'\"") % (fn,tn)).read()
+#		if cp_exit.split(): print(cp_exit)
+
+		fn = os.path.basename(os.path.splitext(ffn)[0])
 
 		disc = ""
 		p_id = re.search('\(\d+@\d+\)', fn).span()
@@ -77,7 +92,7 @@ def uploadPixivImage(c, fn):
 		if 'token' in str(e):
 		#if 'token' in e.args[0]:
 			c = initClient(True)
-			uploadPixivImage(c, fn)
+			uploadPixivImage(c, ffn)
 	else:
 		print('Done')
 		os.popen('notify-send -i facebook "微博发图:done" "%s"' % (fn))
